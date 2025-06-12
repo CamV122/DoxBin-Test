@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Shadow Messenger</title>
+  <style>
+    body { background: #0a0a0a; color: white; font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+    h1 { color: #00ffff; }
+    .container { display: flex; gap: 20px; }
+    .column { flex: 1; background: #111; padding: 20px; border-radius: 8px; }
+    textarea, input { width: 100%; margin-top: 10px; padding: 10px; border-radius: 5px; border: none; }
+    button { margin-top: 10px; padding: 10px 20px; background: #00ffff; color: black; border: none; border-radius: 5px; cursor: pointer; }
+    .message, .post { background: #222; padding: 10px; margin-top: 10px; border-left: 4px solid #00ffff; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <h1>🕶️ Shadow Messenger</h1>
+  <p>Logged in as: <span id="currentUser"></span></p>
+  <div class="container">
+    <div class="column">
+      <h2>Public Wall</h2>
+      <textarea id="postText" placeholder="Say something to the world..."></textarea>
+      <button onclick="postPublic()">Post</button>
+      <div id="posts"></div>
+    </div>
+    <div class="column">
+      <h2>Private Message</h2>
+      <input id="toUser" placeholder="Send to (username)">
+      <textarea id="messageText" placeholder="Type your private message..."></textarea>
+      <button onclick="sendMessage()">Send</button>
+      <h3>Inbox</h3>
+      <div id="messages"></div>
+    </div>
+  </div>
+
+  <script>
+    const user = localStorage.getItem("shadowUser");
+    if (!user) window.location.href = "/login.html";
+    document.getElementById("currentUser").textContent = user;
+
+    async function loadMessages() {
+      const res = await fetch('/messages');
+      const data = await res.json();
+      const container = document.getElementById('messages');
+      container.innerHTML = '';
+      data.forEach(msg => {
+        if (msg.to === user) {
+          const div = document.createElement('div');
+          div.className = 'message';
+          div.textContent = `[From: ${msg.from}] ${msg.text}`;
+          container.appendChild(div);
+        }
+      });
+    }
+
+    async function loadPosts() {
+      const res = await fetch('/posts');
+      const data = await res.json();
+      const container = document.getElementById('posts');
+      container.innerHTML = '';
+      data.forEach(post => {
+        const div = document.createElement('div');
+        div.className = 'post';
+        div.textContent = `[${post.user}] ${post.text}`;
+        container.appendChild(div);
+      });
+    }
+
+    async function postPublic() {
+      const text = document.getElementById('postText').value;
+      if (!text.trim()) return;
+      await fetch('/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user, text })
+      });
+      document.getElementById('postText').value = '';
+      loadPosts();
+    }
+
+    async function sendMessage() {
+      const to = document.getElementById('toUser').value;
+      const text = document.getElementById('messageText').value;
+      if (!to.trim() || !text.trim()) return;
+      await fetch('/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: user, to, text })
+      });
+      document.getElementById('messageText').value = '';
+      loadMessages();
+    }
+
+    loadPosts();
+    loadMessages();
+  </script>
+</body>
+</html>
